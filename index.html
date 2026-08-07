@@ -204,8 +204,8 @@ const PSEUDO = '(Media cost - SCALEO payouts)';
 const KPIS = DATA.kpis;
 // Official KPI grand total (provided by management; includes teams beyond EMAIL/MEDIA/SOCIAL)
 const KPIS_TOTAL = {budget:10267, signups:1900, users:430, revenue:30800, profit:20533};
-// Team-reported Media MTD values for Aug 2026 (validated by the team)
-const MEDIA_OVR = {signups:178, users:10};
+// Team-validated MTD values for Aug 2026 (reported by the team)
+const TEAM_OVR = { MEDIA:{signups:178, users:10}, SOCIAL:{signups:1, users:0} };
 const OVR_PERIOD = state => state.from==='2026-08-01' && state.to==='2026-08-07' && !state.advertiser;
 const TEAMS = ['EMAIL','MEDIA','SOCIAL'];
 const PALETTE = ['#2f80ed','#ec407a','#ff9800','#26a69a','#7e57c2','#26c6da','#ffb300','#5c6bc0','#ef5350','#8d6e63','#78909c','#66bb6a'];
@@ -251,12 +251,20 @@ function renderCards(recs, rr){
     reg: sum(recs,r=>r.signups), ftd: sum(recs,r=>r.ftd),
     rev: sum(recs,r=>r.revenue), cost: sum(recs,r=>r.cost)
   };
-  // Apply team-reported Media MTD values (Aug 2026 default period, all advertisers)
-  if(OVR_PERIOD(state) && (!state.team || state.team==='MEDIA')){
-    const mReg = sum(recs.filter(r=>r.team==='MEDIA'), r=>r.signups);
-    const mFtd = sum(recs.filter(r=>r.team==='MEDIA'), r=>r.ftd);
-    t.reg += MEDIA_OVR.signups - mReg;
-    t.ftd += MEDIA_OVR.users - mFtd;
+  // Apply team-validated MTD values (Aug 2026 default period, all advertisers)
+  if(OVR_PERIOD(state)){
+    if(!state.team || state.team==='MEDIA'){
+      const mReg = sum(recs.filter(r=>r.team==='MEDIA'), r=>r.signups);
+      const mFtd = sum(recs.filter(r=>r.team==='MEDIA'), r=>r.ftd);
+      t.reg += TEAM_OVR.MEDIA.signups - mReg;
+      t.ftd += TEAM_OVR.MEDIA.users - mFtd;
+    }
+    if(!state.team || state.team==='SOCIAL'){
+      const sReg = sum(recs.filter(r=>r.team==='SOCIAL'), r=>r.signups);
+      const sFtd = sum(recs.filter(r=>r.team==='SOCIAL'), r=>r.ftd);
+      t.reg += TEAM_OVR.SOCIAL.signups - sReg;
+      t.ftd += TEAM_OVR.SOCIAL.users - sFtd;
+    }
   }
   t.profit = t.rev - t.cost;
   const rrV = v => Math.round(v / rr.elapsed * rr.dim);
@@ -295,10 +303,12 @@ function renderTeamTable(recs, rr){
     p.budget += r.cost; p.signups += r.signups; p.users += r.ftd; p.revenue += r.revenue;
   }
   for(const tm of TEAMS) per[tm].profit = per[tm].revenue - per[tm].budget;
-  // Apply team-reported Media MTD values (Aug 2026 default period, all advertisers)
+  // Apply team-validated MTD values (Aug 2026 default period, all advertisers)
   if(OVR_PERIOD(state)){
-    per.MEDIA.signups = MEDIA_OVR.signups;
-    per.MEDIA.users = MEDIA_OVR.users;
+    per.MEDIA.signups = TEAM_OVR.MEDIA.signups;
+    per.MEDIA.users = TEAM_OVR.MEDIA.users;
+    per.SOCIAL.signups = TEAM_OVR.SOCIAL.signups;
+    per.SOCIAL.users = TEAM_OVR.SOCIAL.users;
   }
   const tot = {budget:0,signups:0,users:0,revenue:0,profit:0};
   for(const tm of TEAMS) for(const k in tot) tot[k] += per[tm][k];
